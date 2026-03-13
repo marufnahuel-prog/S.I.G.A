@@ -1,0 +1,76 @@
+[debug] [2026-03-13T13:34:05.902Z] ----------------------------------------------------------------------
+[debug] [2026-03-13T13:34:05.905Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Nahuel Maruf\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2026-03-13T13:34:05.906Z] CLI Version:   15.10.0
+[debug] [2026-03-13T13:34:05.906Z] Platform:      win32
+[debug] [2026-03-13T13:34:05.906Z] Node Version:  v24.14.0
+[debug] [2026-03-13T13:34:05.906Z] Time:          Fri Mar 13 2026 10:34:05 GMT-0300 (hora estándar de Argentina)
+[debug] [2026-03-13T13:34:05.906Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\Nahuel Maruf\Desktop\SIGA
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] 
+[debug] [2026-03-13T13:39:30.078Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-13T13:39:30.079Z] > authorizing via signed-in user (marufnahuel@gmail.com)
+[debug] [2026-03-13T13:39:30.080Z] Checked if tokens are valid: true, expires at: 1773412413011
+[debug] [2026-03-13T13:39:30.081Z] Checked if tokens are valid: true, expires at: 1773412413011
+[debug] [2026-03-13T13:39:30.082Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=100
+[debug] [2026-03-13T13:39:41.191Z] *** [apiv2] error from fetch(https://firebase.googleapis.com/v1beta1/projects?pageSize=100, {"headers":{},"method":"GET","signal":{"reason":""}}): FetchError: request to https://firebase.googleapis.com/v1beta1/projects?pageSize=100 failed, reason: getaddrinfo ENOTFOUND firebase.googleapis.com
+[debug] [2026-03-13T13:39:41.192Z] Failed to make request to https://firebase.googleapis.com/v1beta1/projects?pageSize=100
+[debug] [2026-03-13T13:39:44.459Z] FirebaseError: Failed to make request to https://firebase.googleapis.com/v1beta1/projects?pageSize=100
+    at RetryOperation._fn (C:\Users\Nahuel Maruf\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:282:31)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+[error] 
+[error] Error: Failed to list Firebase projects. See firebase-debug.log for more info.
+[debug] [2026-03-13T13:40:10.338Z] ----------------------------------------------------------------------
+[debug] [2026-03-13T13:40:10.340Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Nahuel Maruf\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js login --reauth
+[debug] [2026-03-13T13:40:10.341Z] CLI Version:   15.10.0
+[debug] [2026-03-13T13:40:10.341Z] Platform:      win32
+[debug] [2026-03-13T13:40:10.341Z] Node Version:  v24.14.0
+[debug] [2026-03-13T13:40:10.341Z] Time:          Fri Mar 13 2026 10:40:10 GMT-0300 (hora estándar de Argentina)
+[debug] [2026-03-13T13:40:10.341Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+[info] Visit this URL on this device to log in:
+[info] https://accounts.google.com/o/oauth2/auth?client_id=563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com&scope=email%20openid%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloudplatformprojects.readonly%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Ffirebase%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform&response_type=code&state=49400457&redirect_uri=http%3A%2F%2Flocalhost%3A9005&login_hint=marufnahuel%40gmail.com
+[info] 
+[info] Waiting for authentication...
+[debug] [2026-03-13T13:40:20.782Z] >>> [apiv2][query] POST https://accounts.google.com/o/oauth2/token [none]
+[debug] [2026-03-13T13:40:20.783Z] >>> [apiv2][body] POST https://accounts.google.com/o/oauth2/token [omitted]
+[debug] [2026-03-13T13:40:26.141Z] *** [apiv2] error from fetch(https://accounts.google.com/o/oauth2/token, {"headers":{},"method":"POST","body":{"_overheadLength":543,"_valueLength":208,"_valuesToMeasure":[],"writable":false,"readable":true,"dataSize":0,"maxDataSize":2097152,"pauseStreams":true,"_released":true,"_streams":[],"_currentStream":null,"_insideLoop":false,"_pendingNext":false,"_boundary":"--------------------------54e5789332bfabce87149879","_events":{},"_eventsCount":1}}): FetchError: request to https://accounts.google.com/o/oauth2/token failed, reason: getaddrinfo ENOTFOUND accounts.google.com
+[debug] [2026-03-13T13:40:26.142Z] Token Fetch Error: FirebaseError: Failed to make request to https://accounts.google.com/o/oauth2/token
+    at RetryOperation._fn (C:\Users\Nahuel Maruf\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:282:31)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+[error] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[debug] [2026-03-13T13:40:26.150Z] >>> [apiv2][query] POST https://auth.firebase.tools/attest [none]
+[debug] [2026-03-13T13:40:26.150Z] >>> [apiv2][body] POST https://auth.firebase.tools/attest {"session_id":"8a357583-a0eb-4c47-be93-425497fe7e1e"}
+[debug] [2026-03-13T13:40:34.859Z] <<< [apiv2][status] POST https://auth.firebase.tools/attest 200
+[debug] [2026-03-13T13:40:34.859Z] <<< [apiv2][body] POST https://auth.firebase.tools/attest {"token":"ifaAw8cz24h7ZLKYYLiIzMznDPlmOzerE0yt1CKgNw4"}
+[info] 
+[info] To sign in to the Firebase CLI:
+[info] 
+[info] 1. Take note of your session ID:
+[info] 
+[info]    8A357
+[info] 
+[info] 2. Visit the URL below on any device and follow the instructions to get your code:
+[info] 
+[info]    https://auth.firebase.tools/login?code_challenge=5kktFEFRITLZoOE53n5ilSKWq23snZs3dVXxxLtPWqg&session=8a357583-a0eb-4c47-be93-425497fe7e1e&attest=ifaAw8cz24h7ZLKYYLiIzMznDPlmOzerE0yt1CKgNw4
+[info] 
+[info] 3. Paste or enter the authorization code below once you have it:
+[info] 
