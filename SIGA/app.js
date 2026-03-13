@@ -978,8 +978,9 @@ function initEventListeners() {
     document.getElementById('logout-btn')?.addEventListener('click', () => {
         if (confirm('¿Cerrar sesión del sistema?')) {
             currentUser = null;
-            sessionStorage.removeItem('siga_session');
-            checkAuth();
+            localStorage.removeItem('siga_session');
+            // Recargar para limpiar todo el estado residual y volver al login
+            window.location.reload();
         }
     });
 
