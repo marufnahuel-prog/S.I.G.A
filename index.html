@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,10 +9,11 @@
     <!-- Firebase SDK (Compat Version for file:// protocol support) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
+
 <body>
     <!-- Pantalla de Login Institucional -->
     <section id="login-screen" class="splash-screen">
@@ -23,7 +25,7 @@
             <img src="./logo.png" alt="Logo PFA" class="login-logo">
             <h1 class="login-title">SISTEMA INTEGRAL DE GESTIÓN ADMINISTRATIVA</h1>
             <h2 class="login-subtitle">DIVISIÓN CENTRO DE ENTRENAMIENTO TECNOLÓGICO</h2>
-            
+
             <form id="login-form" class="login-form">
                 <div class="form-group">
                     <label for="login-user">Usuario</label>
@@ -51,14 +53,15 @@
                         <span class="app-subtitle">POLICIA FEDERAL ARGENTINA</span>
                     </div>
                 </div>
-                
+
                 <nav class="nav-menu">
                     <button class="nav-btn active" data-target="home"><i class="ph ph-house"></i> Inicio</button>
                     <button class="nav-btn" data-target="personal" onclick="setViewMode('grid')">Personal</button>
                     <button class="nav-btn" data-target="guardias">Guardia</button>
                     <button class="nav-btn" data-target="licencias">Licencias</button>
                     <button class="nav-btn" data-target="servicios">Servicios externos</button>
-                    <button class="nav-btn btn-admin admin-only" data-target="personal" onclick="setViewMode('table')">Personal (Gestión)</button>
+                    <button class="nav-btn btn-admin admin-only" data-target="personal"
+                        onclick="setViewMode('table')">Personal (Gestión)</button>
                     <button class="nav-btn btn-config admin-only" data-target="configuracion">Configuración</button>
                 </nav>
             </div>
@@ -88,7 +91,7 @@
                     <img src="./logo.png" alt="Logo PFA" class="welcome-badge">
                     <h1 class="welcome-greeting">SISTEMA INTEGRAL DE GESTIÓN ADMINISTRATIVA</h1>
                     <p class="welcome-institution">DIVISIÓN CENTRO DE ENTRENAMIENTO TECNOLÓGICO</p>
-                    
+
                     <div class="welcome-card-primary">
                         <div class="user-welcome-info">
                             <i class="ph ph-shield-check"></i>
@@ -131,16 +134,22 @@
                 <div class="module-header" style="flex-wrap: wrap; gap: 1rem;">
                     <div>
                         <h2>Gestión de Personal</h2>
-                        <p style="color: var(--text-secondary); font-size: 0.8rem;">Visualización unificada y administración de efectivos</p>
+                        <p style="color: var(--text-secondary); font-size: 0.8rem;">Visualización unificada y
+                            administración de efectivos</p>
                     </div>
                     <div class="actions" style="display:flex; gap:0.75rem; align-items:center;">
-                        <div class="view-toggle" style="background:#f1f5f9; padding:0.25rem; border-radius:10px; display:flex; gap:0.25rem;">
-                            <button class="btn-icon active" onclick="setViewMode('grid')" title="Vista Cuadrícula"><i class="ph ph-squares-four"></i></button>
-                            <button class="btn-icon" onclick="setViewMode('table')" title="Vista Tabla"><i class="ph ph-list-dashes"></i></button>
+                        <div class="view-toggle"
+                            style="background:#f1f5f9; padding:0.25rem; border-radius:10px; display:flex; gap:0.25rem;">
+                            <button class="btn-icon active" onclick="setViewMode('grid')" title="Vista Cuadrícula"><i
+                                    class="ph ph-squares-four"></i></button>
+                            <button class="btn-icon" onclick="setViewMode('table')" title="Vista Tabla"><i
+                                    class="ph ph-list-dashes"></i></button>
                         </div>
-                        <div class="separator admin-only" style="width:1px; height:24px; background:var(--border-color);"></div>
+                        <div class="separator admin-only"
+                            style="width:1px; height:24px; background:var(--border-color);"></div>
                         <input type="file" id="import-excel" accept=".xlsx" hidden>
-                        <button class="btn btn-secondary btn-sm admin-only" onclick="document.getElementById('import-excel').click()">
+                        <button class="btn btn-secondary btn-sm admin-only"
+                            onclick="document.getElementById('import-excel').click()">
                             <i class="ph ph-file-arrow-up"></i> Importar
                         </button>
                         <button class="btn btn-primary btn-sm admin-only" id="add-personal-btn">
@@ -185,28 +194,37 @@
                 <div class="module-header" style="flex-wrap: wrap; gap: 1rem;">
                     <div>
                         <h2>Planificación de Guardia</h2>
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Gestión de asignaciones institucionales</p>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Gestión de asignaciones
+                            institucionales</p>
                     </div>
-                    
-                    <div class="calendar-controls" style="display:flex; align-items:center; gap:0.75rem; background: var(--white); padding: 0.5rem 1rem; border-radius: 99px; border: 1px solid var(--border-color);">
-                        <button class="nav-btn-cal" onclick="changeMonth(-1)" title="Mes anterior"><i class="ph ph-caret-left"></i></button>
-                        
+
+                    <div class="calendar-controls"
+                        style="display:flex; align-items:center; gap:0.75rem; background: var(--white); padding: 0.5rem 1rem; border-radius: 99px; border: 1px solid var(--border-color);">
+                        <button class="nav-btn-cal" onclick="changeMonth(-1)" title="Mes anterior"><i
+                                class="ph ph-caret-left"></i></button>
+
                         <div style="display:flex; gap:0.5rem; align-items:center;">
-                            <select id="cal-month" onchange="jumpToDate()" style="border:none; background:transparent; font-weight:700; color:var(--primary-blue); cursor:pointer; font-size:1rem;"></select>
-                            <select id="cal-year" onchange="jumpToDate()" style="border:none; background:transparent; font-weight:700; color:var(--primary-blue); cursor:pointer; font-size:1rem;"></select>
+                            <select id="cal-month" onchange="jumpToDate()"
+                                style="border:none; background:transparent; font-weight:700; color:var(--primary-blue); cursor:pointer; font-size:1rem;"></select>
+                            <select id="cal-year" onchange="jumpToDate()"
+                                style="border:none; background:transparent; font-weight:700; color:var(--primary-blue); cursor:pointer; font-size:1rem;"></select>
                         </div>
 
-                        <button class="nav-btn-cal" onclick="changeMonth(1)" title="Mes siguiente"><i class="ph ph-caret-right"></i></button>
+                        <button class="nav-btn-cal" onclick="changeMonth(1)" title="Mes siguiente"><i
+                                class="ph ph-caret-right"></i></button>
                         <div style="width: 1px; height: 20px; background: var(--border-color); margin: 0 0.5rem;"></div>
-                        <button class="btn btn-secondary btn-sm" onclick="goToToday()" style="border-radius:20px; padding: 0.3rem 1rem;">HOY</button>
+                        <button class="btn btn-secondary btn-sm" onclick="goToToday()"
+                            style="border-radius:20px; padding: 0.3rem 1rem;">HOY</button>
                     </div>
                     <button class="btn btn-secondary" id="export-guardia-btn">
                         <i class="ph ph-file-xls"></i> Exportar Mes
                     </button>
                 </div>
 
-                <div class="calendar-wrapper" style="background: var(--white); border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                    <div class="calendar-weekdays" style="display:grid; grid-template-columns: repeat(7, 1fr); background: #f8fafc; border-bottom: 1px solid var(--border-color);">
+                <div class="calendar-wrapper"
+                    style="background: var(--white); border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                    <div class="calendar-weekdays"
+                        style="display:grid; grid-template-columns: repeat(7, 1fr); background: #f8fafc; border-bottom: 1px solid var(--border-color);">
                         <div class="weekday">LUN</div>
                         <div class="weekday">MAR</div>
                         <div class="weekday">MIÉ</div>
@@ -215,7 +233,8 @@
                         <div class="weekday">SÁB</div>
                         <div class="weekday">DOM</div>
                     </div>
-                    <div class="guard-grid" id="guard-grid" style="grid-template-columns: repeat(7, 1fr); gap: 0; display: grid;">
+                    <div class="guard-grid" id="guard-grid"
+                        style="grid-template-columns: repeat(7, 1fr); gap: 0; display: grid;">
                         <!-- Generado por JS -->
                     </div>
                 </div>
@@ -253,7 +272,8 @@
                 <div class="module-header" style="flex-wrap: wrap; gap: 1rem;">
                     <div>
                         <h2>Gestión de Servicios Externos</h2>
-                        <p style="color: var(--text-secondary); font-size: 0.8rem;">Generación y exportación de órdenes de servicio</p>
+                        <p style="color: var(--text-secondary); font-size: 0.8rem;">Generación y exportación de órdenes
+                            de servicio</p>
                     </div>
                     <div class="actions" style="display:flex; gap:0.75rem;">
                         <button class="btn btn-secondary" id="export-servicios-resumen-btn">
@@ -294,7 +314,7 @@
                         <i class="ph ph-user-plus"></i> Crear Nuevo Usuario
                     </button>
                 </div>
-                
+
                 <div class="table-container">
                     <table>
                         <thead>
@@ -389,7 +409,7 @@
         </div>
 
         <!-- Modales Generales -->
-        
+
         <!-- Ficha Técnica -->
         <div id="ficha-modal" class="modal">
             <div class="modal-content">
@@ -415,7 +435,8 @@
                     <!-- Tags dynamic -->
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn btn-primary" onclick="document.getElementById('quick-add-modal').style.display='none'">Finalizar</button>
+                    <button type="button" class="btn btn-primary"
+                        onclick="document.getElementById('quick-add-modal').style.display='none'">Finalizar</button>
                 </div>
             </div>
         </div>
@@ -483,7 +504,8 @@
                         </div>
                     </div>
                     <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('personal-modal').style.display='none'">Cancelar</button>
+                        <button type="button" class="btn btn-secondary"
+                            onclick="document.getElementById('personal-modal').style.display='none'">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Guardar Registro</button>
                     </div>
                 </form>
@@ -518,7 +540,7 @@
                         <label>Ubicación / Destino</label>
                         <input type="text" id="s-lugar" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Seleccionar Personal para el Servicio</label>
                         <div class="multi-select-container">
@@ -530,10 +552,12 @@
                                 <!-- Checkboxes generados por JS -->
                             </div>
                         </div>
-                        <small style="color:var(--text-secondary); margin-top:0.5rem; display:block;">Seleccione todos los oficiales que serán afectados a este servicio.</small>
+                        <small style="color:var(--text-secondary); margin-top:0.5rem; display:block;">Seleccione todos
+                            los oficiales que serán afectados a este servicio.</small>
                     </div>
                     <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('servicio-modal').style.display='none'">Descartar</button>
+                        <button type="button" class="btn btn-secondary"
+                            onclick="document.getElementById('servicio-modal').style.display='none'">Descartar</button>
                         <button type="submit" class="btn btn-primary">Confirmar Evento</button>
                     </div>
                 </form>
@@ -565,7 +589,8 @@
                         </div>
                     </div>
                     <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('licencia-modal').style.display='none'">Cancelar</button>
+                        <button type="button" class="btn btn-secondary"
+                            onclick="document.getElementById('licencia-modal').style.display='none'">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Asentar Registro</button>
                     </div>
                 </form>
@@ -576,9 +601,10 @@
 
     </div>
 
-        <footer class="app-footer">
-            <span class="version-footer-text">Versión 1.0.2 - 13/03/2026</span>
-        </footer>
+    <footer class="app-footer">
+        <span class="version-footer-text">Versión 1.0.2 - 13/03/2026</span>
+    </footer>
     <script src="./app.js"></script>
 </body>
+
 </html>
