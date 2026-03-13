@@ -52,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
         syncData();
         
         initEventListeners();
-        console.log("SIGA: Sistema Dashboard Institucional iniciado con Firebase Firestore.");
     } catch (error) {
         console.error("SIGA Error:", error);
     }
@@ -72,12 +71,10 @@ async function syncData() {
         }
     }
 
-    // 1. Personal
     db.collection("personal").onSnapshot((snapshot) => {
         personal = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         sortPersonal();
-        renderPersonalCards();
-        renderAdminPersonal();
+        renderPersonal(); // Llamada única a renderizador unificado
         updatePersonalSelects();
         renderHomeStats();
     });
@@ -100,7 +97,6 @@ async function syncData() {
                 jerarquia: '',
                 legajo: ''
             });
-            console.log("Admin user created.");
         }
 
         renderUsersTable();
@@ -115,6 +111,7 @@ async function syncData() {
     db.collection("licencias").onSnapshot((snapshot) => {
         licencias = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderLicencias();
+        renderPersonal();
         renderGuardGrid();
     });
 
@@ -125,6 +122,7 @@ async function syncData() {
             guardias[doc.id] = doc.data().asignaciones;
         });
         renderGuardGrid();
+        renderPersonal();
         renderHomeStats();
     });
 
@@ -132,6 +130,7 @@ async function syncData() {
     db.collection("servicios").onSnapshot((snapshot) => {
         serviciosExternos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderServices();
+        renderPersonal();
     });
 
     // Verificar Auth después de la primera carga
@@ -148,11 +147,10 @@ window.deletePersonal = deletePersonal;
 window.editUser = editUser;
 window.deleteUser = deleteUser;
 window.removeFromQA = removeFromQA;
-window.removeStaffFromService = removeStaffFromService;
-window.addStaffToService = addStaffToService;
 window.deleteService = deleteService;
 window.exportarExcelServicio = exportarExcelServicio;
 window.deleteLicencia = deleteLicencia;
+window.setViewMode = setViewMode;
 
 function initUsers() {
     // Ya no es necesario hardcodear aquí, se maneja en Firestore
@@ -163,8 +161,6 @@ function checkAuth() {
     const appContainer = document.getElementById('app-container');
     const loginCard = document.getElementById('login-card');
     const loader = document.getElementById('loader');
-
-    console.log("checkAuth invocado. currentUser:", currentUser);
 
     if (currentUser && currentUser.username) {
         loginScreen.style.display = 'none';
@@ -214,7 +210,7 @@ function updateUIForRole() {
         document.body.classList.add('role-admin');
     } else {
         document.body.classList.remove('role-admin');
-        // El Operador PUEDE entrar a admin-personal para cargar, pero no a configuración
+        // El Operador PUEDE entrar a personal, pero no a configuración
         const activeModule = document.querySelector('.module.active');
         if (activeModule && activeModule.id === 'configuracion') {
             switchModule('personal');
@@ -226,11 +222,14 @@ function renderHomeStats() {
     // Total Personal
     document.getElementById('stat-personal-count').innerText = personal.length;
 
-    // Asignaciones hoy
+    // Asignaciones hoy (Guardia + Servicios Externos)
     const now = new Date();
-    const dateKey = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
-    const todayGuards = guardias[dateKey] ? guardias[dateKey].length : 0;
-    document.getElementById('stat-active-guards').innerText = todayGuards;
+    const dKey = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+    
+    const todayGuardCount = guardias[dKey] ? guardias[dKey].length : 0;
+    const todayServiceCount = serviciosExternos.filter(s => s.fecha === dKey).length;
+    
+    document.getElementById('stat-active-guards').innerText = todayGuardCount + todayServiceCount;
 }
 
 function switchModule(targetId) {
@@ -302,35 +301,140 @@ function startClock() {
     setInterval(update, 1000);
 }
 
-// --- Gestión de Personal (Visualización Premium) ---
-function renderPersonalCards() {
+// --- Gestión de Personal (Versión Unificada) ---
+let currentViewMode = 'grid';
+
+function setViewMode(mode) {
+    currentViewMode = mode;
+    const gridView = document.getElementById('personal-cards');
+    const tableView = document.getElementById('personal-table-view');
+    const toggles = document.querySelectorAll('.view-toggle .btn-icon');
+
+    toggles.forEach(t => t.classList.remove('active'));
+    if (mode === 'grid') {
+        gridView.style.display = 'grid';
+        tableView.style.display = 'none';
+        toggles[0].classList.add('active');
+    } else {
+        gridView.style.display = 'none';
+        tableView.style.display = 'block';
+        toggles[1].classList.add('active');
+    }
+    renderPersonal();
+}
+
+function renderPersonal() {
     const grid = document.getElementById('personal-cards');
+    const tbody = document.getElementById('admin-personal-tbody');
     const search = document.getElementById('search-personal')?.value.toLowerCase() || '';
-    if (!grid) return;
+
+    if (!grid || !tbody) return;
+
     grid.innerHTML = '';
+    tbody.innerHTML = '';
+
+    // Lógica de Estado Dinámico (Basado en fecha de hoy)
+    const now = new Date();
+    const dKey = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
 
     personal.forEach((p, index) => {
-        if (!p.nombre.toLowerCase().includes(search) && !p.jerarquia.toLowerCase().includes(search)) return;
+        const pNombreNormalized = (p.nombre || "").trim().toUpperCase();
 
+        // 1. Verificar Licencia Activa por fecha
+        const onLic = licencias.some(l => (l.nombre || "").trim().toUpperCase() === pNombreNormalized && dKey >= l.desde && dKey <= l.hasta);
+        
+        // 2. Verificar Servicio Externo Activo hoy
+        const onExt = serviciosExternos.filter(s => (s.nombre || "").trim().toUpperCase() === pNombreNormalized && s.fecha === dKey);
+        
+        // 3. Verificar Guardia Institucional hoy
+        const dayGuards = (guardias[dKey] || []).map(n => n.trim().toUpperCase());
+        const onGuardia = dayGuards.includes(pNombreNormalized);
+
+        // 4. Determinar Situación Base
+        let situacion = p.situacion || "Servicio";
+        let statusClass = situacion === 'Licencia' ? 'status-licencia' : (situacion === 'Franca' ? 'status-franca' : 'status-servicio');
+        let statusText = situacion.toUpperCase();
+
+        // 5. Aplicar Overrides Dinámicos
+        if (onLic) {
+            statusText = "LICENCIA"; // Forzada por fecha específica
+            statusClass = "status-licencia";
+        } else if (onExt.length > 0) {
+            statusText = `S. EXTERNO (${onExt[0].os})`; // Forzada por servicio externo
+            statusClass = "status-externo";
+        } else if (onGuardia) {
+            statusText = "GUARDIA"; // Forzada por planificación de guardia
+            statusClass = "status-externo";
+        }
+
+        // Filtro global con protecciones
+        const nombreVal = (p.nombre || "").toLowerCase();
+        const jerarquiaVal = (p.jerarquia || "").toLowerCase();
+        const legajoVal = (p.legajo || "").toLowerCase();
+        const dniVal = (p.dni || "").toLowerCase();
+        const searchVal = search.toLowerCase();
+
+        const matches = nombreVal.includes(searchVal) || 
+                       jerarquiaVal.includes(searchVal) ||
+                       legajoVal.includes(searchVal) ||
+                       dniVal.includes(searchVal);
+        
+        if (!matches) return;
+
+        // Render para Vista Cuadrícula
         const card = document.createElement('div');
         card.className = 'person-card';
         card.onclick = () => showFicha(index);
+        
         card.innerHTML = `
-            <span class="rank-label">${p.jerarquia}</span>
-            <h4>${p.nombre}</h4>
-            <p style="font-size: 0.8rem; color: var(--text-secondary);">LP: ${p.legajo}</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                <span class="rank-label">${p.jerarquia || "SIN RANGO"}</span>
+                <span class="status-badge ${statusClass}">${statusText}</span>
+            </div>
+            <h4 style="margin-bottom:0.25rem;">${p.nombre || "SIN NOMBRE"}</h4>
+            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                <p style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">
+                    <i class="ph ph-identification-card"></i> LP: ${p.legajo || "-"} | DNI: ${p.dni || "-"}
+                </p>
+                <p style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">
+                    <i class="ph ph-phone"></i> ${p.telefono || "-"}
+                </p>
+            </div>
         `;
         grid.appendChild(card);
+
+        // Render para Vista Tabla
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><span class="rank-label">${p.jerarquia || "S.R."}</span></td>
+            <td><b style="font-size:1rem;">${p.nombre || "SIN NOMBRE"}</b></td>
+            <td><span class="status-badge ${statusClass}" style="box-shadow:none; padding: 0.2rem 0.6rem;">${statusText}</span></td>
+            <td><code style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">${p.legajo || "-"}</code></td>
+            <td>${p.dni || "-"}</td>
+            <td style="font-size:0.85rem; font-weight:500; color:var(--text-secondary);">${p.telefono || "-"}</td>
+            <td class="admin-only">
+                <div style="display:flex; gap:0.5rem;">
+                    <button class="btn btn-secondary btn-sm" onclick="editPersonal(${index})" title="Editar"><i class="ph ph-pencil-simple"></i></button>
+                    <button class="btn btn-danger btn-sm" onclick="deletePersonal(${index})" title="Eliminar"><i class="ph ph-trash-simple"></i></button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
     });
 }
 
 function showFicha(index) {
     const p = personal[index];
     const body = document.getElementById('ficha-body');
+    const situacion = p.situacion || "Servicio";
+    const statusClass = situacion === 'Licencia' ? 'status-licencia' : 'status-servicio';
     body.innerHTML = `
-        <div class="ficha-header" style="border-bottom: 2px solid var(--primary-blue); padding-bottom: 1rem; margin-bottom: 1.5rem;">
-            <span class="rank-label">${p.jerarquia}</span>
-            <h2 style="color: var(--primary-blue); margin-top: 0.5rem;">${p.nombre}</h2>
+        <div class="ficha-header" style="border-bottom: 2px solid #f1f5f9; padding-bottom: 1.5rem; margin-bottom: 2rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="rank-label" style="font-size:0.75rem; padding:0.4rem 1rem;">${p.jerarquia || "SIN RANGO"}</span>
+                <span class="status-badge ${statusClass}" style="font-size:0.75rem; padding:0.5rem 1.25rem;">${situacion.toUpperCase()}</span>
+            </div>
+            <h2 style="color: var(--primary-blue); margin-top: 1rem; font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;">${p.nombre || "SIN NOMBRE"}</h2>
         </div>
         <div class="ficha-grid">
             <div class="ficha-item"><label>Legajo</label><p>${p.legajo}</p></div>
@@ -339,36 +443,12 @@ function showFicha(index) {
             <div class="ficha-item"><label>Obra Social</label><p>${p.os || '-'}</p></div>
             <div class="ficha-item"><label>CSJPFA</label><p>${p.csjpfa || '-'}</p></div>
             <div class="ficha-item"><label>Armamento</label><p>${p.armamento || 'SIN ASIGNAR'}</p></div>
-            <div class="ficha-item full-width"><label>Domicilio</label><p>${p.domicilio}</p></div>
+            <div class="ficha-item"><label>Domicilio</label><p>${p.domicilio}</p></div>
             <div class="ficha-item"><label>Teléfono</label><p>${p.telefono}</p></div>
             <div class="ficha-item"><label>Alternativo</label><p>${p.telAlternativo || '-'}</p></div>
         </div>
     `;
     document.getElementById('ficha-modal').style.display = 'block';
-}
-
-// --- Administración ---
-function renderAdminPersonal() {
-    const tbody = document.getElementById('admin-personal-tbody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-
-    personal.forEach((p, index) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><span class="rank-label" style="background:#f1f5f9; color:var(--primary-blue); font-size:0.6rem;">${p.jerarquia}</span></td>
-            <td><b>${p.nombre}</b></td>
-            <td>${p.legajo}</td>
-            <td>${p.dni}</td>
-            <td class="admin-only">
-                <button class="btn btn-secondary btn-sm" onclick="editPersonal(${index})"><i class="ph ph-note-pencil"></i></button>
-                <button class="btn btn-danger btn-sm" onclick="deletePersonal(${index})"><i class="ph ph-trash"></i></button>
-            </td>
-            <td class="operator-view" style="display: none;">-</td>
-        `;
-        tbody.appendChild(tr);
-    });
-    updatePersonalSelects();
 }
 
 // --- Gestión de Usuarios (Configuración) ---
@@ -505,22 +585,33 @@ function openQuickAdd(dateKey) {
     personal.forEach(p => {
         if (dayAssignments.includes(p.nombre)) return;
         
-        // Validación de Licencia por fecha específica
+        // Validación de Licencia por campo estado O por fecha específica
         const formattedDate = new Date(parts[0], parts[1]-1, parts[2]);
-        const onLic = licencias.some(l => {
+        const onLicByDate = licencias.some(l => {
             const desde = new Date(l.desde + "T00:00:00");
             const hasta = new Date(l.hasta + "T23:59:59");
             return l.nombre === p.nombre && formattedDate >= desde && formattedDate <= hasta;
         });
 
-        options += `<option value="${p.nombre}" ${onLic ? 'disabled' : ''}>
-            ${p.jerarquia} ${p.nombre}${onLic ? ' (LICENCIA)' : ''}
+        const isCurrentlyOnLic = p.situacion === 'Licencia' || onLicByDate;
+
+        options += `<option value="${p.nombre}" ${isCurrentlyOnLic ? 'disabled' : ''} style="${isCurrentlyOnLic ? 'color: red;' : ''}">
+            ${p.jerarquia} ${p.nombre}${isCurrentlyOnLic ? ' (LICENCIA)' : ''}
         </option>`;
     });
     
     select.innerHTML = options;
     select.onchange = async (e) => {
         if (!e.target.value) return;
+        
+        // --- Bloqueo de Seguridad (Safety Lock) ---
+        const p = personal.find(pers => pers.nombre === e.target.value);
+        if (p && p.situacion === 'Licencia') {
+            alert('Acceso Denegado: El personal se encuentra bajo régimen de Licencia y no puede ser afectado a servicios.');
+            e.target.value = '';
+            return;
+        }
+
         if (!guardias[dateKey]) guardias[dateKey] = [];
         const nuevasAsignaciones = [...guardias[dateKey], e.target.value];
         
@@ -555,110 +646,112 @@ async function removeFromQA(dateKey, idx) {
     }
 }
 
-// --- Servicios Operativos ---
+// --- Servicios Operativos (Versión Masiva) ---
 function renderServices() {
-    const container = document.getElementById('services-container');
-    if (!container) return;
-    container.innerHTML = '';
+    const tbody = document.getElementById('services-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
 
     if (serviciosExternos.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding: 4rem; color: var(--text-secondary);">No hay servicios programados.</div>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-secondary);">No hay servicios registrados.</td></tr>';
         return;
     }
 
-    serviciosExternos.forEach((s, sIdx) => {
-        const card = document.createElement('div');
-        card.className = 'service-event-card';
-        
-        const staffHtml = s.asignados.map((nombre, pIdx) => {
-            const p = personal.find(pers => pers.nombre === nombre);
-            return p ? `
-                <div class="person-tag small" style="flex-direction: column; align-items: flex-start; gap: 0.2rem; min-width: 180px;">
-                    <div style="display:flex; width:100%; justify-content: space-between; align-items:center;">
-                        <b>${p.jerarquia.substring(0,4)}.</b> ${p.nombre}
-                        <button class="remove-tag" onclick="removeStaffFromService(${sIdx}, ${pIdx})">×</button>
-                    </div>
-                    <div style="font-size: 0.65rem; opacity: 0.8; display:flex; flex-direction:column;">
-                        <span>LP: ${p.legajo} | DNI: ${p.dni}</span>
-                        <span><i class="ph ph-envelope-simple"></i> ${p.gmail || '-'}</span>
-                        <span><i class="ph ph-phone"></i> ${p.telefono}</span>
-                    </div>
-                </div>` : '';
-        }).join('');
+    // Ordenar por fecha descendente y luego por O.S.
+    const sortedServices = [...serviciosExternos].sort((a, b) => {
+        const dateA = new Date(a.fecha);
+        const dateB = new Date(b.fecha);
+        if (dateB - dateA !== 0) return dateB - dateA;
+        return (b.os || "").localeCompare(a.os || "");
+    });
 
-        card.innerHTML = `
-            <div class="event-info">
-                <h4>${s.motivo}</h4>
-                <div class="event-details">
-                    <div><i class="ph ph-calendar-blank"></i> ${s.fecha}</div>
-                    <div><i class="ph ph-clock"></i> ${s.hora} HS</div>
-                    <div><i class="ph ph-map-pin"></i> ${s.lugar}</div>
-                </div>
-                <button class="btn btn-danger btn-sm" style="margin-top:1.5rem;" onclick="deleteService(${sIdx})">Cancelar Evento</button>
-            </div>
-                <div class="event-staff">
-                    <h5>Efectivos Comisionados</h5>
-                    <div class="staff-list">${staffHtml}</div>
-                    <select class="form-group" style="margin-top:1rem; padding:0.5rem;" onchange="addStaffToService(${sIdx}, this.value)">
-                        <option value="">+ Asignar...</option>
-                        ${personal.map(p => `<option value="${p.nombre}">${p.jerarquia} ${p.nombre}</option>`).join('')}
-                    </select>
-                    <button class="btn btn-secondary btn-sm" style="margin-top:1rem; width:100%; border-color: var(--primary-blue); color: var(--primary-blue);" onclick="exportarExcelServicio(${sIdx})">
-                        <i class="ph ph-file-xls"></i> Exportar Planilla Oficial
-                    </button>
-                </div>
+        sortedServices.forEach((s) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><code style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:700;">${s.os || '-'}</code></td>
+                <td><b>${s.motivo}</b></td>
+                <td>${s.fecha}</td>
+                <td><span class="rank-label">${s.jerarquia || "S.R."}</span></td>
+                <td>${s.nombre}</td>
+                <td><small>${s.legajo || "-"}</small></td>
+                <td><span style="font-size:0.85rem;">${s.lugar}</span></td>
+                <td>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn btn-secondary btn-sm" onclick="exportarExcelServicio('${s.os}', '${s.fecha}')" title="Exportar este servicio">
+                            <i class="ph ph-file-xls" style="color:#16a34a;"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm admin-only" onclick="deleteService('${s.id}')" title="Eliminar">
+                            <i class="ph ph-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+}
+
+function updateMultiStaffList(filter = '') {
+    const list = document.getElementById('multi-staff-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    personal.forEach(p => {
+        const fullName = `${p.jerarquia} ${p.nombre}`.toUpperCase();
+        if (filter && !fullName.toLowerCase().includes(filter.toLowerCase())) return;
+
+        const isLic = p.situacion === 'Licencia';
+        const item = document.createElement('div');
+        item.className = `multi-select-item ${isLic ? 'disabled' : ''}`;
+        
+        item.innerHTML = `
+            <input type="checkbox" value="${p.nombre}" id="chk-${p.id}" ${isLic ? 'disabled' : ''}>
+            <label for="chk-${p.id}">${p.jerarquia} ${p.nombre} ${isLic ? '(LICENCIA)' : ''}</label>
         `;
-        container.appendChild(card);
+
+        if (!isLic) {
+            item.onclick = (e) => {
+                if (e.target.tagName !== 'INPUT') {
+                    const chk = item.querySelector('input');
+                    chk.checked = !chk.checked;
+                }
+            };
+        }
+
+        list.appendChild(item);
     });
 }
 
-async function addStaffToService(sIdx, nombre) {
-    if (!nombre) return;
-    const s = serviciosExternos[sIdx];
-    if (s.asignados.includes(nombre)) return;
-    
-    const nuevosAsignados = [...s.asignados, nombre];
-    try {
-        await db.collection("servicios").doc(s.id).update({ asignados: nuevosAsignados });
-    } catch (error) {
-        console.error("Error al asignar personal al servicio:", error);
-    }
-}
 
-async function removeStaffFromService(sIdx, pIdx) {
-    const s = serviciosExternos[sIdx];
-    const nuevosAsignados = [...s.asignados];
-    nuevosAsignados.splice(pIdx, 1);
-    try {
-        await db.collection("servicios").doc(s.id).update({ asignados: nuevosAsignados });
-    } catch (error) {
-        console.error("Error al quitar personal del servicio:", error);
-    }
-}
-
-async function deleteService(idx) {
-    const s = serviciosExternos[idx];
-    if (confirm('¿Eliminar servicio operativo?')) {
+async function deleteService(id) {
+    if (confirm('¿Eliminar esta asignación de servicio?')) {
         try {
-            await db.collection("servicios").doc(s.id).delete();
+            await db.collection("servicios").doc(id).delete();
         } catch (error) {
             console.error("Error al eliminar servicio:", error);
+            alert("Error al eliminar el registro.");
         }
     }
 }
 
 // --- Exportación Excel Premium de Servicios ---
-function exportarExcelServicio(idx) {
-    const s = serviciosExternos[idx];
-    const fileName = `Planilla_Servicio_${s.motivo.replace(/\s+/g, '_')}.xlsx`;
+function exportarExcelServicio(os, fecha) {
+    // 1. Filtrar todo el personal afectado a esta O.S. y Fecha
+    const group = serviciosExternos.filter(s => s.os === os && s.fecha === fecha);
     
-    // 1. Preparar Personal (Ordenado por Jerarquía)
-    const staff = s.asignados.map(nombre => personal.find(p => p.nombre === nombre)).filter(p => p);
-    staff.sort((a, b) => HIERARCHY_ORDER.indexOf(a.jerarquia) - HIERARCHY_ORDER.indexOf(b.jerarquia));
+    if (group.length === 0) {
+        alert("⚠️ No se encontraron datos para este servicio.");
+        return;
+    }
+
+    const s = group[0]; // Datos generales del servicio (Motivo, Lugar, etc.)
+    const fileName = `Planilla_OS_${os.replace(/[\/\s]/g, '-')}_${s.motivo.replace(/\s+/g, '_')}.xlsx`;
     
-    // 2. Definir Estilos Comunes
+    // 2. Ordenar por Jerarquía
+    const staff = [...group].sort((a, b) => HIERARCHY_ORDER.indexOf(a.jerarquia) - HIERARCHY_ORDER.indexOf(b.jerarquia));
+    
+    // 3. Estilos Premium
     const styleHeader = {
-        fill: { fgColor: { rgb: "FFFF00" } }, // Amarillo
+        fill: { fgColor: { rgb: "FFFF00" } }, // Amarillo Táctico
         font: { bold: true, color: { rgb: "000000" }, sz: 12 },
         alignment: { horizontal: "center", vertical: "center" },
         border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } }
@@ -674,62 +767,55 @@ function exportarExcelServicio(idx) {
         alignment: { vertical: "center" }
     };
 
-    // 3. Crear Estructura de Datos para la Planilla
+    // 4. Mapeo de Columnas: O.S., Fecha, Jerarquía, Nombre, Legajo, Destino
     const rows = [
-        // Fila 1: Encabezado Institucional
-        [{ v: "POLICIA FEDERAL ARGENTINA", s: styleHeader }, "", "", "", ""],
-        ["", "", "", "", ""], // Espacio
-        [{ v: "DIVISIÓN:", s: styleTitle }, { v: "CENTRO DE ENTRENAMIENTO TECNOLÓGICO", s: styleCell }, "", "", ""],
-        [{ v: "MOTIVO:", s: styleTitle }, { v: s.motivo.toUpperCase(), s: styleCell }, "", "", ""],
-        [{ v: "LUGAR:", s: styleTitle }, { v: s.lugar.toUpperCase(), s: styleCell }, "", "", ""],
-        [{ v: "FECHA/HORA:", s: styleTitle }, { v: `${s.fecha} - ${s.hora} HS`, s: styleCell }, "", "", ""],
-        ["", "", "", "", ""], // Espacio
+        [{ v: "POLICIA FEDERAL ARGENTINA", s: styleHeader }, "", "", "", "", ""],
+        [{ v: "DIVISIÓN CENTRO DE ENTRENAMIENTO TECNOLÓGICO", s: { font: { bold: true, sz: 10 }, alignment: { horizontal: "center" } } }, "", "", "", "", ""],
+        ["", "", "", "", "", ""], // Espacio
+        [{ v: "ORDEN DE SERVICIO:", s: styleTitle }, { v: os, s: styleCell }, { v: "FECHA:", s: styleTitle }, { v: s.fecha, s: styleCell }, { v: "EVENTO:", s: styleTitle }, { v: s.motivo.toUpperCase(), s: styleCell }],
+        [{ v: "DESTINO / LUGAR:", s: styleTitle }, { v: s.lugar.toUpperCase(), s: styleCell }, "", "", "", ""],
+        ["", "", "", "", "", ""], // Espacio
         // Encabezados de Tabla
         [
-            { v: "JERARQUÍA", s: styleHeader }, 
-            { v: "NOMBRE Y APELLIDO", s: styleHeader }, 
-            { v: "LP", s: styleHeader }, 
-            { v: "DNI", s: styleHeader }, 
-            { v: "TELÉFONO", s: styleHeader }
+            { v: "O.S.", s: styleHeader }, 
+            { v: "FECHA", s: styleHeader }, 
+            { v: "JERARQUÍA / GRADO", s: styleHeader }, 
+            { v: "APELLIDO Y NOMBRE", s: styleHeader }, 
+            { v: "LEGAJO (LP)", s: styleHeader },
+            { v: "DESTINO", s: styleHeader }
         ]
     ];
 
-    // 4. Agregar Personal
+    // 5. Cargar Datos
     staff.forEach(p => {
         rows.push([
-            { v: p.jerarquia, s: styleCell },
+            { v: os, s: styleCell },
+            { v: s.fecha, s: styleCell },
+            { v: p.jerarquia || '-', s: styleCell },
             { v: p.nombre, s: styleCell },
-            { v: p.legajo, s: styleCell },
-            { v: p.dni, s: styleCell },
-            { v: p.telefono, s: styleCell }
+            { v: p.legajo || '-', s: styleCell },
+            { v: s.lugar, s: styleCell }
         ]);
     });
 
-    // 5. Crear Libro y Hoja
+    // 6. Generación del Archivo
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rows);
 
-    // 6. Configuraciones Finales (Merge y AutoFit)
+    // Merge para encabezados
     ws['!merges'] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }, // Merge PFA Header
-        { s: { r: 2, c: 1 }, e: { r: 2, c: 4 } }, // Merge División info
-        { s: { r: 3, c: 1 }, e: { r: 3, c: 4 } }, // Merge Motivo info
-        { s: { r: 4, c: 1 }, e: { r: 4, c: 4 } }, // Merge Lugar info
-        { s: { r: 5, c: 1 }, e: { r: 5, c: 4 } }  // Merge Fecha info
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, // Header PFA
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }, // Header División
+        { s: { r: 4, c: 1 }, e: { r: 4, c: 5 } }  // Merge Destino info
     ];
 
-    // Lógica Automática de AutoFit
-    const colWidths = [15, 30, 10, 12, 15]; // Anchos base
-    rows.forEach(row => {
-        row.forEach((cell, i) => {
-            const val = cell.v ? String(cell.v) : "";
-            if (val.length + 2 > colWidths[i]) colWidths[i] = val.length + 2;
-        });
-    });
+    // AutoFit Columnas
+    const colWidths = [15, 12, 18, 30, 12, 25];
     ws['!cols'] = colWidths.map(w => ({ wch: w }));
 
-    XLSX.utils.book_append_sheet(wb, ws, "Planilla_Servicio");
+    XLSX.utils.book_append_sheet(wb, ws, "Servicio_OS");
     XLSX.writeFile(wb, fileName);
+    alert('✅ Excel generado correctamente.');
 }
 
 // --- Licencias ---
@@ -803,14 +889,43 @@ function sortPersonal() {
     personal.sort((a, b) => HIERARCHY_ORDER.indexOf(a.jerarquia) - HIERARCHY_ORDER.indexOf(b.jerarquia));
 }
 
+async function savePersonal() {
+    try {
+        const batch = db.batch();
+        personal.forEach(p => {
+            if (p.id) {
+                const ref = db.collection("personal").doc(p.id);
+                batch.update(ref, p);
+            } else {
+                const ref = db.collection("personal").doc();
+                batch.set(ref, p);
+            }
+        });
+        await batch.commit();
+        alert('✅ Personal cargado con éxito.');
+    } catch (error) {
+        console.error("Error al salvar personal:", error);
+        alert("⚠️ Error al guardar en la nube.");
+    }
+}
+
 async function deletePersonal(index) {
     const p = personal[index];
-    if (confirm(`¿Dar de BAJA a ${p.nombre}?`)) {
+    if (confirm('¿Está seguro de eliminar a este oficial? Esta acción no se puede deshacer y liberará espacio en la base de datos')) {
         try {
+            // 1. Limpieza de Referencias (Licencias asociadas)
+            const licSnap = await db.collection("licencias").where("nombre", "==", p.nombre).get();
+            const batch = db.batch();
+            licSnap.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+
+            // 2. Borrado Físico del Oficial
             await db.collection("personal").doc(p.id).delete();
         } catch (error) {
-            console.error("Error al eliminar personal:", error);
-            alert("Error al eliminar los datos.");
+            console.error("Error en el borrado definitivo:", error);
+            alert("Error al procesar la eliminación física.");
         }
     }
 }
@@ -829,19 +944,27 @@ function editPersonal(index) {
     document.getElementById('p-domicilio').value = p.domicilio;
     document.getElementById('p-telefono').value = p.telefono;
     document.getElementById('p-tel-alt').value = p.telAlternativo || '';
+    document.getElementById('p-situacion').value = p.situacion || 'Servicio';
     
     document.getElementById('modal-title').innerText = 'Modificar Efectivo';
     document.getElementById('personal-modal').style.display = 'block';
 }
 
 function initEventListeners() {
-    document.getElementById('search-personal')?.addEventListener('input', renderPersonalCards);
+    document.getElementById('search-personal')?.addEventListener('input', renderPersonal);
+    document.getElementById('multi-search-staff')?.addEventListener('input', (e) => updateMultiStaffList(e.target.value));
 
     document.getElementById('add-personal-btn')?.addEventListener('click', () => {
         document.getElementById('personal-form').reset();
         document.getElementById('edit-index').value = '';
-        document.getElementById('modal-title').innerText = 'Registro de Efectivo';
+        document.getElementById('modal-title').innerText = 'Registro de Personal';
         document.getElementById('personal-modal').style.display = 'block';
+    });
+
+    document.getElementById('add-servicio-btn')?.addEventListener('click', () => {
+        document.getElementById('servicio-form').reset();
+        updateMultiStaffList();
+        document.getElementById('servicio-modal').style.display = 'block';
     });
 
     document.getElementById('personal-form')?.addEventListener('submit', async (e) => {
@@ -872,42 +995,67 @@ function initEventListeners() {
             armamento: document.getElementById('p-arma').value,
             domicilio: document.getElementById('p-domicilio').value,
             telefono: document.getElementById('p-telefono').value,
-            telAlternativo: document.getElementById('p-tel-alt').value
+            telAlternativo: document.getElementById('p-tel-alt').value,
+            situacion: document.getElementById('p-situacion').value
         };
 
         try {
             if (editId === '') {
                 await db.collection("personal").add(data);
+                alert('✅ Personal cargado con éxito.');
             } else {
                 await db.collection("personal").doc(editId).update(data);
+                alert('✅ Registro actualizado correctamente.');
             }
             document.getElementById('personal-modal').style.display = 'none';
         } catch (error) {
             console.error("Error al guardar personal:", error);
-            alert("Error al guardar en la nube.");
+            alert("⚠️ Error al guardar en la nube.");
         }
     });
 
-    document.getElementById('add-servicio-btn')?.addEventListener('click', () => {
-        document.getElementById('servicio-form').reset();
-        document.getElementById('servicio-modal').style.display = 'block';
-    });
 
     document.getElementById('servicio-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const data = {
-            motivo: document.getElementById('s-motivo').value,
-            fecha: document.getElementById('s-fecha').value,
-            hora: document.getElementById('s-hora').value,
-            lugar: document.getElementById('s-lugar').value,
-            asignados: []
-        };
+        const os = document.getElementById('s-os').value;
+        const motivo = document.getElementById('s-motivo').value.toUpperCase();
+        const fecha = document.getElementById('s-fecha').value;
+        const hora = document.getElementById('s-hora').value;
+        const lugar = document.getElementById('s-lugar').value.toUpperCase();
+
+        const selectedStaff = Array.from(document.querySelectorAll('#multi-staff-list input:checked')).map(cb => cb.value);
+
+        if (selectedStaff.length === 0) {
+            alert("Debe seleccionar al menos un oficial.");
+            return;
+        }
+
         try {
-            await db.collection("servicios").add(data);
+            const batch = db.batch();
+            selectedStaff.forEach(nombre => {
+                const p = personal.find(pers => pers.nombre === nombre) || {};
+                const data = {
+                    os,
+                    motivo,
+                    fecha,
+                    hora,
+                    lugar,
+                    nombre,
+                    jerarquia: p.jerarquia || '',
+                    legajo: p.legajo || '',
+                    dni: p.dni || '',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                const newDocRef = db.collection("servicios").doc();
+                batch.set(newDocRef, data);
+            });
+
+            await batch.commit();
             document.getElementById('servicio-modal').style.display = 'none';
+            alert(`Carga Masiva Exitosa: ${selectedStaff.length} oficiales afectados a la O.S. ${os}`);
         } catch (error) {
-            console.error("Error al crear servicio:", error);
-            alert("Error al guardar en la nube.");
+            console.error("Error en carga masiva:", error);
+            alert("Error al procesar la carga en lote.");
         }
     });
 
@@ -989,12 +1137,13 @@ function initEventListeners() {
         }
     });
 
+    document.getElementById('logout-btn')?.addEventListener('click', () => {
         if (confirm('¿Cerrar sesión del sistema?')) {
             currentUser = null;
             localStorage.removeItem('siga_session');
-            // Volver al estado inicial de login
             checkAuth();
         }
+    });
 
     // --- Profile & Pass Change ---
     document.getElementById('user-profile-trigger')?.addEventListener('click', () => {
@@ -1129,18 +1278,62 @@ function initEventListeners() {
         XLSX.writeFile(wb, `SIGA_Guardia_${monthName}_${currentYear}.xlsx`);
     });
 
-    // --- Exportación Resumen de Servicios ---
+    // --- Exportación Resumen de Servicios (Estructura Masiva) ---
     document.getElementById('export-servicios-resumen-btn')?.addEventListener('click', () => {
-        const data = [['RESUMEN GENERAL DE SERVICIOS OPERATIVOS EXTERNOS']];
-        data.push(['FECHA', 'MOTIVO', 'LUGAR', 'HORARIO', 'PERSONAL ASIGNADO']);
+        if (serviciosExternos.length === 0) {
+            alert("No hay datos para exportar.");
+            return;
+        }
+
+        const data = [['REGISTRO GENERAL DE SERVICIOS OPERATIVOS EXTERNOS - SIGA']];
+        data.push(['ORDEN DE SERVICIO', 'MOTIVO / EVENTO', 'FECHA', 'JERARQUÍA', 'APELLIDO Y NOMBRE', 'LP', 'DNI', 'DESTINO / LUGAR']);
         
-        serviciosExternos.forEach(s => {
-            data.push([s.fecha, s.motivo, s.lugar, s.hora, s.asignados.join(', ')]);
+        // Estilos
+        const styleHeader = {
+            fill: { fgColor: { rgb: "0F172A" } },
+            font: { bold: true, color: { rgb: "FFFFFF" }, sz: 10 },
+            alignment: { horizontal: "center", vertical: "center" },
+            border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } }
+        };
+
+        const styleCell = {
+            border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } },
+            alignment: { vertical: "center" }
+        };
+
+        const rows = [
+            [{ v: data[0][0], s: { font: { bold: true, sz: 14 }, alignment: { horizontal: "center" } } }],
+            [],
+            data[1].map(h => ({ v: h, s: styleHeader }))
+        ];
+
+        // Ordenar antes de exportar
+        const sortedForExcel = [...serviciosExternos].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+
+        sortedForExcel.forEach(s => {
+            rows.push([
+                { v: s.os || '-', s: styleCell },
+                { v: s.motivo, s: styleCell },
+                { v: s.fecha, s: styleCell },
+                { v: s.jerarquia || '-', s: styleCell },
+                { v: s.nombre, s: styleCell },
+                { v: s.legajo || '-', s: styleCell },
+                { v: s.dni || '-', s: styleCell },
+                { v: s.lugar, s: styleCell }
+            ]);
         });
 
-        const ws = XLSX.utils.aoa_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Resumen_Servicios");
-        XLSX.writeFile(wb, "SIGA_Resumen_Servicios_Externos.xlsx");
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+
+        // Merge título y anchos
+        ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
+        ws['!cols'] = [
+            { wch: 15 }, { wch: 30 }, { wch: 12 }, { wch: 15 }, 
+            { wch: 25 }, { wch: 10 }, { wch: 12 }, { wch: 25 }
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, "Servicios_SIGA");
+        XLSX.writeFile(wb, "SIGA_Registro_General_Servicios.xlsx");
     });
 }

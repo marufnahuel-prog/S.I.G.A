@@ -43,37 +43,41 @@
     <!-- Contenido Principal del Sistema -->
     <div id="app-container" style="display: none;">
         <header class="top-bar">
-            <div class="logo-container">
-                <img src="./logo.png" alt="Logo PFA" class="logo">
-                <div class="brand-info">
-                    <span class="app-name">SIGA</span>
-                    <span class="app-subtitle">POLICIA FEDERAL ARGENTINA</span>
+            <div class="header-left">
+                <div class="logo-container">
+                    <img src="./logo.png" alt="Logo PFA" class="logo">
+                    <div class="brand-info">
+                        <span class="app-name">SIGA</span>
+                        <span class="app-subtitle">POLICIA FEDERAL ARGENTINA</span>
+                    </div>
                 </div>
-            </div>
-            
-            <nav class="nav-menu">
-                <button class="nav-btn active" data-target="home"><i class="ph ph-house"></i> Inicio</button>
-                <button class="nav-btn" data-target="personal">Personal</button>
-                <button class="nav-btn" data-target="guardias">Guardia</button>
-                <button class="nav-btn" data-target="licencias">Licencias</button>
-                <button class="nav-btn" data-target="servicios">Servicios externos</button>
-                <button class="nav-btn btn-admin" data-target="admin-personal">Personal (Gestión)</button>
-                <button class="nav-btn btn-config admin-only" data-target="configuracion">Configuración</button>
-            </nav>
-
-            <div class="user-session">
-                <div class="user-info" id="user-profile-trigger">
-                    <i class="ph ph-user-circle"></i>
-                    <span id="active-user-name">Cargando...</span>
-                </div>
-                <button id="logout-btn" class="nav-btn-logout" title="Cerrar Sesión">
-                    <i class="ph ph-sign-out"></i>
-                </button>
+                
+                <nav class="nav-menu">
+                    <button class="nav-btn active" data-target="home"><i class="ph ph-house"></i> Inicio</button>
+                    <button class="nav-btn" data-target="personal" onclick="setViewMode('grid')">Personal</button>
+                    <button class="nav-btn" data-target="guardias">Guardia</button>
+                    <button class="nav-btn" data-target="licencias">Licencias</button>
+                    <button class="nav-btn" data-target="servicios">Servicios externos</button>
+                    <button class="nav-btn btn-admin admin-only" data-target="personal" onclick="setViewMode('table')">Personal (Gestión)</button>
+                    <button class="nav-btn btn-config admin-only" data-target="configuracion">Configuración</button>
+                </nav>
             </div>
 
             <div class="system-time" id="clock-container">
                 <span id="current-date">--/--/----</span>
                 <span id="current-time">00:00:00</span>
+            </div>
+
+            <div class="header-right">
+                <div class="user-session">
+                    <div class="user-info" id="user-profile-trigger">
+                        <i class="ph ph-user-circle"></i>
+                        <span id="active-user-name">Cargando...</span>
+                    </div>
+                    <button id="logout-btn" class="nav-btn-logout" title="Cerrar Sesión">
+                        <i class="ph ph-sign-out"></i>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -122,46 +126,55 @@
                 </div>
             </section>
 
-            <!-- Módulo Personal (Visualización) -->
+            <!-- Módulo Gestión de Personal (Unificado) -->
             <section id="personal" class="module">
-                <div class="module-header">
-                    <h2>Personal de planta permanente</h2>
-                    <div class="search-bar">
-                        <input type="text" id="search-personal" placeholder="Filtro rápido por Nombre o Jerarquía...">
+                <div class="module-header" style="flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h2>Gestión de Personal</h2>
+                        <p style="color: var(--text-secondary); font-size: 0.8rem;">Visualización unificada y administración de efectivos</p>
                     </div>
-                </div>
-                <div class="personal-grid" id="personal-cards">
-                    <!-- Se llena con JS -->
-                </div>
-            </section>
-
-            <!-- Módulo Administración (Editar Personal) -->
-            <section id="admin-personal" class="module">
-                <div class="module-header">
-                    <h2>Administración de Personal</h2>
-                    <div class="actions" style="display:flex; gap:1rem;">
+                    <div class="actions" style="display:flex; gap:0.75rem; align-items:center;">
+                        <div class="view-toggle" style="background:#f1f5f9; padding:0.25rem; border-radius:10px; display:flex; gap:0.25rem;">
+                            <button class="btn-icon active" onclick="setViewMode('grid')" title="Vista Cuadrícula"><i class="ph ph-squares-four"></i></button>
+                            <button class="btn-icon" onclick="setViewMode('table')" title="Vista Tabla"><i class="ph ph-list-dashes"></i></button>
+                        </div>
+                        <div class="separator admin-only" style="width:1px; height:24px; background:var(--border-color);"></div>
                         <input type="file" id="import-excel" accept=".xlsx" hidden>
-                        <button class="btn btn-secondary" onclick="document.getElementById('import-excel').click()">
-                            <i class="ph ph-file-arrow-up"></i> Importar Excel
+                        <button class="btn btn-secondary btn-sm admin-only" onclick="document.getElementById('import-excel').click()">
+                            <i class="ph ph-file-arrow-up"></i> Importar
                         </button>
-                        <button class="btn btn-primary" id="add-personal-btn">
-                            <i class="ph ph-user-plus"></i> Alta de Efectivo
+                        <button class="btn btn-primary btn-sm admin-only" id="add-personal-btn">
+                            <i class="ph ph-user-plus"></i> Alta
                         </button>
                     </div>
                 </div>
-                <div class="table-container">
+
+                <div class="search-bar">
+                    <i class="ph ph-magnifying-glass"></i>
+                    <input type="text" id="search-personal" placeholder="Filtro rápido: Nombre, Jerarquía, LP o DNI...">
+                </div>
+
+                <!-- Vista Cuadrícula (Cards) -->
+                <div class="personal-grid" id="personal-cards">
+                    <!-- Dinámico -->
+                </div>
+
+                <!-- Vista Tabla (Table) -->
+                <div class="table-container" id="personal-table-view" style="display:none;">
                     <table>
                         <thead>
                             <tr>
                                 <th>Jerarquía</th>
                                 <th>Nombre y Apellido</th>
+                                <th>Estado</th>
                                 <th>LP</th>
                                 <th>DNI</th>
-                                <th>Operaciones</th>
+                                <th>Teléfono</th>
+                                <th class="admin-only">Operaciones</th>
                             </tr>
                         </thead>
                         <tbody id="admin-personal-tbody">
-                            <!-- Se llena con JS -->
+                            <!-- Dinámico -->
                         </tbody>
                     </table>
                 </div>
@@ -235,16 +248,41 @@
                 </div>
             </section>
 
-            <!-- Módulo Servicios Externos -->
+            <!-- Módulo Servicios Externos (Generación & Detallado) -->
             <section id="servicios" class="module">
-                <div class="module-header">
-                    <h2>Gestión de Servicios Externos</h2>
-                    <button class="btn btn-primary" id="add-servicio-btn">
-                        <i class="ph ph-calendar-plus"></i> Programar Nuevo Servicio
-                    </button>
+                <div class="module-header" style="flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h2>Gestión de Servicios Externos</h2>
+                        <p style="color: var(--text-secondary); font-size: 0.8rem;">Generación y exportación de órdenes de servicio</p>
+                    </div>
+                    <div class="actions" style="display:flex; gap:0.75rem;">
+                        <button class="btn btn-secondary" id="export-servicios-resumen-btn">
+                            <i class="ph ph-file-xls"></i> Exportar Todo
+                        </button>
+                        <button class="btn btn-primary admin-only" id="add-servicio-btn">
+                            <i class="ph ph-calendar-plus"></i> Generar Servicio
+                        </button>
+                    </div>
                 </div>
-                <div id="services-container" class="services-list">
-                    <!-- Dinámico con JS -->
+
+                <div class="table-container">
+                    <table id="servicios-table">
+                        <thead>
+                            <tr>
+                                <th>O.S.</th>
+                                <th>Motivo / Evento</th>
+                                <th>Fecha</th>
+                                <th>Jerarquía</th>
+                                <th>Efectivo</th>
+                                <th>LP</th>
+                                <th>Destino</th>
+                                <th class="admin-only">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="services-tbody">
+                            <!-- Dinámico -->
+                        </tbody>
+                    </table>
                 </div>
             </section>
 
@@ -434,6 +472,15 @@
                             <label>Contacto Alternativo</label>
                             <input type="text" id="p-tel-alt">
                         </div>
+                        <div class="form-group">
+                            <label>Situación de Revista</label>
+                            <select id="p-situacion" required>
+                                <option value="Servicio">Servicio</option>
+                                <option value="Licencia">Licencia</option>
+                                <option value="Suspendido">Suspendido</option>
+                                <option value="Franca">Franca</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="modal-actions">
                         <button type="button" class="btn btn-secondary" onclick="document.getElementById('personal-modal').style.display='none'">Cancelar</button>
@@ -449,6 +496,10 @@
                 <span class="close-btn" id="close-servicio-modal">&times;</span>
                 <h3>Programación de Servicio</h3>
                 <form id="servicio-form">
+                    <div class="form-group">
+                        <label>Orden de Servicio (O.S.) <span style="color:red;">*</span></label>
+                        <input type="text" id="s-os" required placeholder="Ej: 124-2026">
+                    </div>
                     <div class="form-group">
                         <label>Motivo del Servicio / Denominación</label>
                         <input type="text" id="s-motivo" required placeholder="Ej: Operativo Estadio Monumental">
@@ -466,6 +517,20 @@
                     <div class="form-group">
                         <label>Ubicación / Destino</label>
                         <input type="text" id="s-lugar" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Seleccionar Personal para el Servicio</label>
+                        <div class="multi-select-container">
+                            <div class="multi-select-search">
+                                <i class="ph ph-magnifying-glass"></i>
+                                <input type="text" id="multi-search-staff" placeholder="Filtrar personal...">
+                            </div>
+                            <div id="multi-staff-list" class="multi-select-list">
+                                <!-- Checkboxes generados por JS -->
+                            </div>
+                        </div>
+                        <small style="color:var(--text-secondary); margin-top:0.5rem; display:block;">Seleccione todos los oficiales que serán afectados a este servicio.</small>
                     </div>
                     <div class="modal-actions">
                         <button type="button" class="btn btn-secondary" onclick="document.getElementById('servicio-modal').style.display='none'">Descartar</button>
