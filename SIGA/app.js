@@ -161,6 +161,8 @@ function initUsers() {
 function checkAuth() {
     const loginScreen = document.getElementById('login-screen');
     const appContainer = document.getElementById('app-container');
+    const loginCard = document.getElementById('login-card');
+    const loader = document.getElementById('loader');
 
     console.log("checkAuth invocado. currentUser:", currentUser);
 
@@ -171,8 +173,20 @@ function checkAuth() {
         renderHomeStats();
         switchModule('home');
     } else {
+        // Asegurar que el formulario sea visible y el loader esté oculto
         loginScreen.style.display = 'flex';
         appContainer.style.display = 'none';
+        if (loginCard) loginCard.style.display = 'block';
+        if (loader) loader.style.display = 'none';
+        
+        // Limpiar campos para re-ingreso
+        const userField = document.getElementById('login-user');
+        if (userField) {
+            userField.value = '';
+            userField.focus();
+        }
+        const passField = document.getElementById('login-pass');
+        if (passField) passField.value = '';
     }
 }
 
@@ -975,14 +989,12 @@ function initEventListeners() {
         }
     });
 
-    document.getElementById('logout-btn')?.addEventListener('click', () => {
         if (confirm('¿Cerrar sesión del sistema?')) {
             currentUser = null;
             localStorage.removeItem('siga_session');
-            // Recargar para limpiar todo el estado residual y volver al login
-            window.location.reload();
+            // Volver al estado inicial de login
+            checkAuth();
         }
-    });
 
     // --- Profile & Pass Change ---
     document.getElementById('user-profile-trigger')?.addEventListener('click', () => {
